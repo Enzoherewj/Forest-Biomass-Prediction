@@ -1,0 +1,265 @@
+---
+title: "forest-biomass-china"
+output: html_document
+date: "2022-12-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+# loading packages
+suppressPackageStartupMessages(library(MASS))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(modelr))
+suppressPackageStartupMessages(library(hrbrthemes))
+suppressPackageStartupMessages(library(GGally))
+suppressPackageStartupMessages(library(gridExtra))
+suppressPackageStartupMessages(library(kableExtra))
+suppressPackageStartupMessages(library(sjPlot))
+suppressPackageStartupMessages(library(solitude))
+suppressPackageStartupMessages(library(glmnet))
+suppressPackageStartupMessages(library(plotmo))
+suppressPackageStartupMessages(library(rcompanion))
+suppressPackageStartupMessages(library(car))
+suppressPackageStartupMessages(library(lmtest))
+suppressPackageStartupMessages(library(caret))
+suppressPackageStartupMessages(library(htmlTable))
+```
+
+```{r, include=FALSE}
+df <- read_csv('https://raw.githubusercontent.com/rsw0/forest-biomass-china/main/train.csv')
+```
+
+```{r}
+df <- df %>% mutate(Soil_fertility = as.factor(Soil_fertility), 
+                    Forest_type = as.factor(Forest_type), 
+                    Dominant_species = as.factor(Dominant_species), 
+                    Stand_origin = as.factor(Stand_origin),
+                    I = as.factor(I), 
+                    II = as.factor(II), 
+                    III = as.factor(III),
+                    IV = as.factor(IV), 
+                    V = as.factor(V), 
+                    Cunninghamia_forest = as.factor(Cunninghamia_forest),
+                    Larix_forest = as.factor(Larix_forest), 
+                    Other_Forest_type = as.factor(Other_Forest_type), 
+                    Pinus_forest = as.factor(Pinus_forest),
+                    Eucalyptus_forest = as.factor(Eucalyptus_forest),
+                    Populus_forest = as.factor(Populus_forest),
+                    C._lanceolata = as.factor(C._lanceolata), 
+                    Other_Dominant_species = as.factor(Other_Dominant_species), 
+                    P._massoniana = as.factor(P._massoniana),
+                    P._tabuliformis = as.factor(P._tabuliformis), 
+                    P._koraiensis = as.factor(P._koraiensis), 
+                    L._gmelinii = as.factor(L._gmelinii),
+                    Planted = as.factor(Planted),
+                    Primary = as.factor(Primary),
+                    Secondary = as.factor(Secondary))
+```
+
+```{r}
+# form x and y
+x <- model.matrix(~ df$Latitude + df$Longitude + df$Altitude + df$MAT + df$MAP + df$Stand_age)[, -1]
+y <- df$AGBt
+
+# cross validation to find best lambda
+cvfit <- cv.glmnet(x, y)
+
+png("output/cv_lasso.png", width = 6, height = 4, units = 'in', res = 300)
+plot(cvfit)
+dev.off()
+lambda_best = cvfit$lambda.1se
+
+# use best lambda to fit model
+lasso_model <- glmnet(x, y, alpha = 1, lambda = lambda_best, standardize = TRUE)
+
+# extract non-zero coefficients
+nonzero_coef <- coef(lasso_model, complete = TRUE)
+
+plot_lasso <- glmnet(x, y, alpha = 1, standardize = TRUE)
+# Plot variable coefficients vs. shrinkage parameter lambda.
+png("output/lasso.png", width = 6, height = 4, units = 'in', res = 300)
+plot(plot_lasso, xvar="lambda", label=TRUE)
+dev.off()
+```
+
+
+Based on LASSO's output, we choose to remove feature #1, #2, #3, and #4, because the most regularized model corresponding to the penalty at $\lambda_{1se}$ contains only feature #5 and feature #6. The two remaining features are: MAP, Stand_age
+
+```{r}
+# Soil_fertility ANOVA
+owa.soil <- aov(AGBt~Soil_fertility, df)
+tukey.soil <- TukeyHSD(owa.soil)
+png("output/tukey_soil.png", width = 6, height = 4, units = 'in', res = 300)
+plot(tukey.soil, las = 1, col = "brown")
+dev.off()
+
+png("output/box_soil.png", width = 6, height = 4, units = 'in', res = 300)
+df %>% ggplot(aes(Soil_fertility, AGBt)) + geom_point(aes(color=Soil_fertility), alpha=0.2, position='jitter') + geom_boxplot(outlier.size=5, outlier.colour="blue", alpha=0.1)
+dev.off()
+```
+
+Soil_fertility could potentially be reduce to three categories: 1, 234, and 5
+
+```{r}
+# Forest_Type ANOVA
+owa.forest <- aov(AGBt~Forest_type, df)
+tukey.forest <- TukeyHSD(owa.forest)
+png("output/tukey_forest.png", width = 6, height = 4, units = 'in', res = 300)
+plot(tukey.forest, las = 1, col = "brown")
+dev.off()
+
+png("output/box_forest.png", width = 6, height = 4, units = 'in', res = 300)
+df %>% ggplot(aes(Forest_type, AGBt)) + geom_point(aes(color=Forest_type), alpha=0.2, position='jitter') + geom_boxplot(outlier.size=5, outlier.colour="blue", alpha=0.1)
+dev.off()
+```
+
+Forest_type ANOVA doesn't show significant differences among groups
+
+```{r}
+# Dominant Species ANOVA
+owa.species <- aov(AGBt~Dominant_species, df)
+tukey.species <- TukeyHSD(owa.species)
+png("output/tukey_species.png", width = 6, height = 4, units = 'in', res = 300)
+plot(tukey.species, las = 1, col = "brown")
+dev.off()
+
+png("output/box_species.png", width = 6, height = 4, units = 'in', res = 300)
+df %>% ggplot(aes(Dominant_species, AGBt)) + geom_point(aes(color=Dominant_species), alpha=0.2, position='jitter') + geom_boxplot(outlier.size=5, outlier.colour="blue", alpha=0.1)
+dev.off()
+```
+
+```{r}
+# Stand_origin ANOVA
+owa.origin <- aov(AGBt~Stand_origin, df)
+tukey.origin <- TukeyHSD(owa.origin)
+png("output/tukey_origin.png", width = 6, height = 4, units = 'in', res = 300)
+plot(tukey.origin, las = 1, col = "brown")
+dev.off()
+
+png("output/box_origin.png", width = 6, height = 4, units = 'in', res = 300)
+df %>% ggplot(aes(Stand_origin, AGBt)) + geom_point(aes(color=Stand_origin), alpha=0.2, position='jitter') + geom_boxplot(outlier.size=5, outlier.colour="blue", alpha=0.1)
+dev.off()
+```
+
+```{r}
+pca_0_min <- min(df$pca_0)
+pca_1_min <- min(df$pca_1)
+stand_age_min <- min(df$Stand_age)
+df$pca_0 <- df$pca_0 + abs(pca_0_min) + 0.1
+df$pca_1 <- df$pca_1 + abs(pca_1_min) + 0.1
+df$Stand_age <- df$Stand_age + abs(stand_age_min) + 0.1
+print(min(df$pca_0))
+print(min(df$pca_1))
+print(min(df$Stand_age))
+```
+
+```{r}
+mlr <- lm(AGBt ~ MAP + log(Stand_age) + log(pca_0) + Larix_forest + Other_Forest_type + P._tabuliformis, data=df)
+tab_model(mlr, show.se = TRUE, show.stat = TRUE, show.fstat = TRUE, show.intercept = TRUE, digits = 6)
+plot(mlr, which=1, pch = 16)
+plot(mlr, which=2, pch = 16)
+plot(mlr, which=3, pch = 16)
+plot(mlr, which=4, pch = 16)
+```
+
+```{r}
+bptest(mlr)
+```
+
+```{r}
+# residual plot
+png("output/residual.png", width = 6, height = 4, units = 'in', res = 300)
+plot(mlr, which=1, pch = 16)
+dev.off()
+
+# qq plot
+png("output/qq.png", width = 6, height = 4, units = 'in', res = 300)
+plot(mlr, which=2, pch = 16)
+dev.off()
+
+# scale location plot
+png("output/sl.png", width = 6, height = 4, units = 'in', res = 300)
+plot(mlr, which=3)
+dev.off()
+
+# residual histogram
+ResMLS_train <- resid(mlr)
+StanResMLS1 <- rstandard(mlr)
+mfit1 = fitted(mlr)
+png("output/his30.png", width = 6, height = 4, units = 'in', res = 300)
+ggplot(data = data.frame(StanResMLS1), aes(x = StanResMLS1)) + geom_histogram(bins = 30) + labs(x = "Standardized Residuals") + ggtitle("Residual Histogram 30 bin")
+dev.off()
+```
+
+```{r}
+df_validation <- read_csv('https://raw.githubusercontent.com/rsw0/forest-biomass-china/main/validation.csv')
+
+df_validation <- df_validation %>% mutate(Soil_fertility = as.factor(Soil_fertility), 
+                    Forest_type = as.factor(Forest_type), 
+                    Dominant_species = as.factor(Dominant_species), 
+                    Stand_origin = as.factor(Stand_origin),
+                    I = as.factor(I), 
+                    II = as.factor(II), 
+                    III = as.factor(III),
+                    IV = as.factor(IV), 
+                    V = as.factor(V), 
+                    Cunninghamia_forest = as.factor(Cunninghamia_forest),
+                    Larix_forest = as.factor(Larix_forest), 
+                    Other_Forest_type = as.factor(Other_Forest_type), 
+                    Pinus_forest = as.factor(Pinus_forest),
+                    Eucalyptus_forest = as.factor(Eucalyptus_forest),
+                    Populus_forest = as.factor(Populus_forest),
+                    C._lanceolata = as.factor(C._lanceolata), 
+                    Other_Dominant_species = as.factor(Other_Dominant_species), 
+                    P._massoniana = as.factor(P._massoniana),
+                    P._tabuliformis = as.factor(P._tabuliformis), 
+                    P._koraiensis = as.factor(P._koraiensis), 
+                    L._gmelinii = as.factor(L._gmelinii),
+                    Planted = as.factor(Planted),
+                    Primary = as.factor(Primary),
+                    Secondary = as.factor(Secondary))
+
+pca_0_min_val <- min(df_validation$pca_0)
+stand_age_min_val <- min(df_validation$Stand_age)
+df_validation$pca_0 <- df_validation$pca_0 + abs(pca_0_min_val) + 0.1
+df_validation$Stand_age <- df_validation$Stand_age + abs(stand_age_min_val) + 0.1
+print(min(df_validation$pca_0))
+print(min(df_validation$Stand_age))
+```
+
+
+```{r validation_curve}
+in_sample <- predict(mlr, se.fit = TRUE, newdata=data.frame(MAP=df$MAP, Stand_age=df$Stand_age, pca_0=df$pca_0, Larix_forest=df$Larix_forest, Other_Forest_type=df$Other_Forest_type, P._tabuliformis=df$P._tabuliformis))
+###### IMPORTANT, REASSIGNING VALUES TO ResMLS_train, previously used this variable
+ResMLS_train <- df$AGBt - in_sample$fit*var(in_sample$fit)/2
+
+# residual for validation
+output <- predict(mlr, se.fit = TRUE, newdata=data.frame(MAP=df_validation$MAP, Stand_age=df_validation$Stand_age, pca_0=df_validation$pca_0, Larix_forest=df_validation$Larix_forest, Other_Forest_type=df_validation$Other_Forest_type, P._tabuliformis=df_validation$P._tabuliformis))
+ResMLSValidation <- df_validation$AGBt - output$fit*var(output$fit)/2
+
+# validation observation with predictions
+test = data.frame(df_validation$AGBt, output$fit, 1:length(output$fit));
+colnames(test)[1] = "AGBt"
+colnames(test)[2] = "Prediction"
+colnames(test)[3] = "Index"
+
+quartile1 <- unname(quantile(df_validation$AGBt)[2])
+quartile3 <- unname(quantile(df_validation$AGBt)[4])
+validation_IQR <- quartile3 - quartile1
+upper_inner <- quartile3 + 1.5*validation_IQR
+
+# validation
+png("output/tv_line.png", width = 6, height = 4, units = 'in', res = 300)
+ggplot(data = test, aes(x = Index)) + geom_line(aes(y = AGBt, color = "AGBt")) + geom_line(aes(y = Prediction, color="Prediction"), linetype="twodash") + geom_hline(yintercept = max(test$Prediction)) + geom_hline(yintercept = min(test$Prediction)) + geom_hline(yintercept = upper_inner, col = 'purple') + annotate("rect", xmin=1, xmax=max(test$Index), ymin=min(test$Prediction), ymax=max(test$Prediction), alpha=0.05, fill="black") + scale_color_manual(name = element_blank(), labels = c("AGBt","Prediction"), values = c("darkred", "steelblue")) + labs(y = "") + ggtitle("Validation")
+dev.off()
+
+# zoom
+png("output/tv_line_zoom.png", width = 6, height = 4, units = 'in', res = 300)
+test2 = test[50:100,]
+ggplot(data = test2, aes(x = Index)) + geom_line(aes(y = AGBt, color = "AGBt")) + geom_line(aes(y = Prediction, color="Prediction"), linetype="twodash") + geom_hline(yintercept = upper_inner, col = 'purple') + scale_color_manual(name = element_blank(), labels = c("AGBt","Prediction"), values = c("darkred", "steelblue")) + labs(y = "") +ggtitle("Validation Zoom")
+dev.off()
+```
+

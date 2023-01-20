@@ -1,4 +1,4 @@
-# Forest-Biomass-Predictio
+# Forest-Biomass-Prediction
 
 ## Collaborators
 Hanwen Guan, Yunning Liu, Shuhan Mao, Yi Sun, Runsheng Wang, Weijie Xia, Hongyan Zhou

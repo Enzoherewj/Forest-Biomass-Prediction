@@ -1,8 +1,6 @@
-# Forest-Biomass-Prediction
+# Forest-Biomass-Predictio
 
-The final project of GR5205 Linear Regression Models
-
-## Group Members
+## Collaborators
 Hanwen Guan, Yunning Liu, Shuhan Mao, Yi Sun, Runsheng Wang, Weijie Xia, Hongyan Zhou
 
 ## The problem we want to solve

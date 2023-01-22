@@ -4,7 +4,7 @@
 Hanwen Guan, Yunning Liu, Shuhan Mao, Yi Sun, Runsheng Wang, Weijie Xia, Hongyan Zhou
 
 ## The problem we want to solve
-We want to predict the forest biomass in China through linear rergession model based on the dataset from https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-2089.1
+We want to predict the forest biomass in China through rergession model based on the dataset from https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/13-2089.1
 
 ## Brief Introduction
 Forest biomass and its allocation have long been crucial factors in forest ecosystem structure and function. They can be useful in exploring many ecological questions such as forest community dynamics, life-history evolution, and terrestrial carbon cycling. To predict biomass level, both internal factors (e.g., forest types, or soil fertility), as well as external factors (e.g., geographical location, climate, or precipitation), should be taken into consideration.
